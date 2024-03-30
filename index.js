@@ -11,6 +11,7 @@ const wss = new WebSocket.Server({ server });
 function proxySender(ws, conn) {
   ws.on('message', (cmd) => {
     if (cmd === 'stop') {
+      console.log('[Proxy] Connection to mining pool is closed!');
       conn.end();
       return;
     }
@@ -51,7 +52,7 @@ function proxyMain(ws, req) {
       const port = command.params[1];
       const conn = proxyConnect(host, port);
       if (conn) {
-        proxySender(ws, conn, []);
+        proxySender(ws, conn);
         proxyReceiver(conn, ws);
       }
     }
