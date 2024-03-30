@@ -8,6 +8,14 @@ const app = express();
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
+function parseCommand(message) {
+  try {
+    return JSON.parse(message);
+  } catch (error) {
+    return message;
+  }
+}
+
 function proxySender(ws, conn) {
   ws.on('message', (cmd) => {
     if (cmd === 'stop') {
@@ -46,7 +54,7 @@ function proxyConnect(host, port) {
 
 function proxyMain(ws, req) {
   ws.on('message', (message) => {
-    const command = JSON.parse(message);
+    const command = parseCommand(message);
     if (command.method === 'proxy.connect' && command.params.length === 2) {
       const host = command.params[0];
       const port = command.params[1];
