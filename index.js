@@ -17,6 +17,11 @@ function parseCommand(message) {
 }
 
 function proxySender(ws, conn) {
+  ws.on('close', () => {
+    console.log('[Proxy] Connection to mining pool is closed!');
+    conn.end();
+  });
+  
   ws.on('message', (cmd) => {
     if (cmd === 'stop') {
       console.log('[Proxy] Connection to mining pool is closed!');
