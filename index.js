@@ -9,11 +9,6 @@ const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
 function proxySender(ws, conn) {
-  ws.on('close', () => {
-    console.log('[Proxy] Connection to mining pool is closed!');
-    conn.end();
-  });
-
   ws.on('message', (cmd) => {
     try {
       const command = JSON.parse(cmd);
@@ -24,6 +19,11 @@ function proxySender(ws, conn) {
     } catch (error) {
       ws.close();
     }
+  });
+
+  ws.on('close', () => {
+    console.log('[Proxy] Connection to mining pool is closed!');
+    conn.end();
   });
 }
 
@@ -49,19 +49,15 @@ function proxyConnect(host, port) {
 
 function proxyMain(ws, req) {
   ws.on('message', (message) => {
-    try {
-      const command = JSON.parse(message);
-      if (command.method === 'proxy.connect' && command.params.length === 2) {
-        const host = command.params[0];
-        const port = command.params[1];
-        const conn = proxyConnect(host, port);
-        if (conn) {
-          proxySender(ws, conn);
-          proxyReceiver(conn, ws);
-        }
+    const command = JSON.parse(message);
+    if (command.method === 'proxy.connect' && command.params.length === 2) {
+      const host = command.params[0];
+      const port = command.params[1];
+      const conn = proxyConnect(host, port);
+      if (conn) {
+        proxySender(ws, conn, []);
+        proxyReceiver(conn, ws);
       }
-    } catch (error) {
-      ws.close();
     }
   });
 }
