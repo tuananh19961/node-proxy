@@ -32,8 +32,8 @@ function proxyReceiver(conn, cmdq) {
     cmdq.send(data.toString());
   });
   conn.on('error', (err) => {
-    console.log('[Proxy] Error:', err);
-    cmdq.close();
+    console.log(`[err.code] Error: ${err.message}`);
+    conn.end();
   });
   conn.on('end', () => {
     cmdq.close();
