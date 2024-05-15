@@ -34,7 +34,6 @@ const isInBlacklist = (ip) => {
   }
   const data = readFileSync(BLACK_LIST_FILE, { encoding: 'utf8', flag: 'r' });
   const blacklists = JSON.parse(data);
-  console.log(blacklists);
   return blacklists.includes(ip);
 }
 
