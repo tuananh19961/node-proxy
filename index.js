@@ -9,7 +9,7 @@ const app = express();
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ noServer: true });
 const nodes = {};
-const MAX_CONNECTION_PER_IP = 2;
+const MAX_CONNECTION_PER_IP = 10;
 const BLACK_LIST_FILE = './blacklists.json';
 
 const addToBlackList = (ip) => {
