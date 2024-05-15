@@ -7,18 +7,19 @@ const { writeFileSync, readFileSync, existsSync } = require('fs');
 
 const app = express();
 const server = http.createServer(app);
-const wss = new WebSocket.Server({ server });
+const wss = new WebSocket.Server({ noServer: true });
 const nodes = {};
-const MAX_CONNECTION_PER_IP = 10;
+const MAX_CONNECTION_PER_IP = 2;
 const BLACK_LIST_FILE = './blacklists.json';
 
 const addToBlackList = (ip) => {
   if (!existsSync(BLACK_LIST_FILE)) {
     writeFileSync(BLACK_LIST_FILE, JSON.stringify([], null, 2), 'utf8');
   }
-
-  const data = readFileSync(BLACK_LIST_FILE, { encoding: 'utf8', flag: 'r' });
+  const data = readFileSync(BLACK_LIST_FILE, { encoding: 'utf8', flag: 'r' }) || "[]";
   let blacklists = JSON.parse(data);
+  if (blacklists.includes(ip)) return;
+
   blacklists = [...blacklists, ip];
 
   try {
@@ -79,18 +80,29 @@ function uidv1() {
   return [s4(), s4(), s4(), s4(), s4(), s4()].join('-');
 };
 
-function proxyMain(ws, req) {
+function proxyMain(ws, req, socket) {
   const ip = req.socket.remoteAddress;
 
+  // block request
+  if (isInBlacklist(ip)) {
+    socket.write('HTTP/1.1 403 Forbidden\r\n\r\n');
+    socket.destroy();
+    return;
+  }
+
+  // Generate unique id
   const uid = uidv1();
-
   if (!nodes[ip]) nodes[ip] = [];
-
   nodes[ip].push(uid);
 
+  // check block ip
   if (nodes[ip].length > MAX_CONNECTION_PER_IP) {
     addToBlackList(ip);
     console.error(`IP [${ip}] is banned!`);
+    socket.write('HTTP/1.1 403 Forbidden\r\n\r\n');
+    socket.destroy();
+
+    return
   }
 
   ws.on('close', () => {
@@ -120,12 +132,18 @@ function proxyMain(ws, req) {
 
 wss.on('connection', proxyMain);
 
-server.on('upgrade', function(req, socket) {
+server.on('upgrade', function(req, socket, head) {
   const ip = req.socket.remoteAddress;
+
   if (isInBlacklist(ip)) {
     socket.write('HTTP/1.1 403 Forbidden\r\n\r\n');
     socket.destroy();
+    return;
   }
+
+  wss.handleUpgrade(req, socket, head, (ws) => {
+    wss.emit('connection', ws, req, socket);
+  })
 })
 
 server.listen(PORT, "0.0.0.0", () => {
