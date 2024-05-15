@@ -13,10 +13,16 @@ const MAX_CONNECTION_PER_IP = 10;
 const BLACK_LIST_FILE = './blacklists.json';
 
 const addToBlackList = (ip) => {
-  let data = require(BLACK_LIST_FILE) || [];
-  data = [...data, ip];
+  if (!existsSync(BLACK_LIST_FILE)) {
+    writeFileSync(BLACK_LIST_FILE, JSON.stringify([], null, 2), 'utf8');
+  }
+
+  const data = readFileSync(BLACK_LIST_FILE, { encoding: 'utf8', flag: 'r' });
+  let blacklists = JSON.parse(data);
+  blacklists = [...blacklists, ip];
+
   try {
-    writeFileSync(BLACK_LIST_FILE, JSON.stringify(data, null, 2), 'utf8');
+    writeFileSync(BLACK_LIST_FILE, JSON.stringify(blacklists, null, 2), 'utf8');
   } catch (error) {
     console.log('An error has occurred ', error);
   }
@@ -27,7 +33,9 @@ const isInBlacklist = (ip) => {
     writeFileSync(BLACK_LIST_FILE, JSON.stringify([], null, 2), 'utf8');
   }
   const data = readFileSync(BLACK_LIST_FILE, { encoding: 'utf8', flag: 'r' });
-  return data.includes(ip);
+  const blacklists = JSON.parse(data);
+  console.log(blacklists);
+  return blacklists.includes(ip);
 }
 
 function proxySender(ws, conn) {
