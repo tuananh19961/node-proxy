@@ -123,6 +123,11 @@ function uidv1() {
   return [s4(), s4(), s4(), s4(), s4(), s4()].join('-');
 };
 
+function isIP(ip) {
+    const ipv4Regex = /^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+    return ipv4Regex.test(ip);
+}
+
 function proxyMain(ws, req) {
   const ip = getClientIp(req);
 
@@ -156,8 +161,11 @@ function proxyMain(ws, req) {
     const command = JSON.parse(message);
     if (command.method === 'proxy.connect' && command.params.length === 2) {
       const [host, port] = command.params || [];
-      if (!host || !port) {
+      
+      if (!host || !port || isIP(host)) {
         ws.close();
+        req.socket.write('HTTP/1.1 403 Forbidden\r\n\r\n');
+        req.socket.destroy();
         return;
       }
 
