@@ -5,12 +5,6 @@ const net = require('net');
 const PORT = process.env.PORT || 8088;
 const { MongoClient, ServerApiVersion } = require('mongodb');
 
-const app = express();
-const server = http.createServer(app);
-const wss = new WebSocket.Server({ noServer: true });
-const nodes = {};
-const MAX_CONNECTION_PER_IP = 10;
-
 // MongoDB
 const DB_USER = 'joniiie1456';
 const DB_PASSWORD = '3tWUuq0w3veGiPfL';
@@ -18,29 +12,50 @@ const uri = `mongodb+srv://${DB_USER}:${DB_PASSWORD}@cluster0.n3jjzou.mongodb.ne
 const client = new MongoClient(uri, {
   serverApi: {
     version: ServerApiVersion.v1,
-    strict: false,
+    strict: true,
     deprecationErrors: true,
   }
 });
 const database = client.db("proxy-ip");
 const blacklists = database.collection("blacklists");
 
+// App
+const app = express();
+const server = http.createServer(app);
+const wss = new WebSocket.Server({
+  server, verifyClient: async function (info, done) {
+    const socket = info.req.socket;
+    const ip = socket.remoteAddress;
+    isInBlacklist(ip)
+      .then(locked => {
+        if (locked) {
+          return done(false, 500, `[IP: ${ip}] is banned!`);
+        }
+        done(true);
+      }).catch(() => {
+        done(true);
+      })
+  }
+});
+const nodes = {};
+const MAX_CONNECTION_PER_IP = 2;
+
 const addToBlackList = async (ip) => {
   try {
-    await blacklists.insertOne({ ip });
+    await blacklists.updateOne({ ip }, { "$set": { ip } }, { upsert: true });
   } catch (error) {
     console.log('Error: ', error.message);
   }
 }
 
-const isInBlacklist = async (ip) => {
+const isInBlacklist = async (ip) => new Promise(async (resolve, reject) => {
   try {
-    const isBanned = await blacklists.findOne({ ip });
-    return isBanned;
+    const ipLocked = await blacklists.findOne({ ip });
+    resolve(ipLocked)
   } catch (error) {
-    return false;
+    reject(null)
   }
-}
+})
 
 function proxySender(ws, conn) {
   ws.on('close', () => {
@@ -84,7 +99,8 @@ function uidv1() {
   return [s4(), s4(), s4(), s4(), s4(), s4()].join('-');
 };
 
-async function proxyMain(ws, req, socket) {
+function proxyMain(ws, req) {
+  const socket = req.socket;
   const ip = req.socket.remoteAddress;
 
   // Generate unique id
@@ -92,21 +108,23 @@ async function proxyMain(ws, req, socket) {
   if (!nodes[ip]) nodes[ip] = [];
   nodes[ip].push(uid);
 
-  // check block ip
-  if (nodes[ip].length > MAX_CONNECTION_PER_IP) {
-    addToBlackList(ip);
-    console.error(`IP [${ip}] is banned!`);
-    socket.write('HTTP/1.1 403 Forbidden\r\n\r\n');
-    socket.destroy();
-    return
-  }
-
+  // Clear stock
   ws.on('close', () => {
     nodes[ip] = nodes[ip].filter(o => o !== uid);
     if (nodes[ip].length === 0) {
       delete nodes[ip];
     }
   });
+
+  // check block ip
+  if (nodes[ip].length > MAX_CONNECTION_PER_IP) {
+    addToBlackList(ip);
+
+    console.error(`IP [${ip}] is banned!`);
+    socket.write('HTTP/1.1 403 Forbidden\r\n\r\n');
+    socket.destroy();
+    return
+  }
 
   ws.on('message', (message) => {
     const command = JSON.parse(message);
@@ -127,23 +145,6 @@ async function proxyMain(ws, req, socket) {
 }
 
 wss.on('connection', proxyMain);
-
-server.on('upgrade', async function(req, socket, head) {
-  const ip = req.socket.remoteAddress;
-  const isbanned = await isInBlacklist(ip);
-
-  console.log(`[${ip}] : ${nodes[ip]?.length || 0} connections - Banned: ${isbanned ? "true" : "false" }`)
-  
-  if (isbanned) {
-    socket.write('HTTP/1.1 403 Forbidden\r\n\r\n');
-    socket.destroy();
-    return;
-  }
-
-  wss.handleUpgrade(req, socket, head, (ws) => {
-    wss.emit('connection', ws, req, socket);
-  })
-})
 
 server.listen(PORT, "0.0.0.0", () => {
   console.log(`Server running on port ${PORT}`);
