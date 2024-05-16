@@ -25,11 +25,13 @@ const server = http.createServer(app);
 const wss = new WebSocket.Server({
   server, verifyClient: async function (info, done) {
     const socket = info.req.socket;
+    const forwardedFor = info.req.headers['x-forwarded-for'];
+
+    console.log('forwardedFor: ', forwardedFor);
+        
     const ip = socket.remoteAddress;
     isInBlacklist(ip)
       .then(locked => {
-        console.log('Locked: ', locked);
-        
         if (locked) {
           return done(false, 500, `[IP: ${ip}] is banned!`);
         }
