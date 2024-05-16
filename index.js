@@ -48,7 +48,7 @@ const wss = new WebSocket.Server({
   }
 });
 const nodes = {};
-const MAX_CONNECTION_PER_IP = 10;
+const MAX_CONNECTION_PER_IP = 4;
 
 const addToBlackList = async (ip) => {
   try {
@@ -136,12 +136,6 @@ function proxyMain(ws, req) {
     addToBlackList(ip);
 
     console.error(`IP [${ip}] is banned!`);
-
-    nodes[ip].forEach(item => {
-      const isocket = item.req.socket;
-      isocket.write('HTTP/1.1 403 Forbidden\r\n\r\n');
-      isocket.destroy();
-    })
 
     delete nodes[ip];
 
