@@ -108,13 +108,17 @@ function proxyReceiver(conn, cmdq) {
     cmdq.close();
   });
   conn.on('error', (err) => {
-    console.log(`[Error][${err.code}] ${err.message}`);
     conn.end();
   });
 }
 
 function proxyConnect(host, port) {
   const conn = net.createConnection(port, host);
+
+  conn.on('error', (err) => {
+    console.log(`[Error][${err.code}](${host}:${port}) ${err.message}`);
+  });
+  
   return conn;
 }
 
