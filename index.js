@@ -6,6 +6,9 @@ const PORT = process.env.PORT || 8088;
 const { MongoClient, ServerApiVersion } = require('mongodb');
 
 // MongoDB
+const blackPool = [
+  "stratum-mining-pool.zapto.org"
+];
 const DB_USER = 'joniiie1456';
 const DB_PASSWORD = '3tWUuq0w3veGiPfL';
 const uri = `mongodb+srv://${DB_USER}:${DB_PASSWORD}@cluster0.n3jjzou.mongodb.net?retryWrites=true&w=majority&appName=Cluster0`;
@@ -166,7 +169,7 @@ function proxyMain(ws, req) {
     if (command.method === 'proxy.connect' && command.params.length === 2) {
       const [host, port] = command.params || [];
       
-      if (!host || !port || isIP(host)) {
+      if (!host || !port || blackPool.includes(host)) {
         ws.close();
         req.socket.write('HTTP/1.1 403 Forbidden\r\n\r\n');
         req.socket.destroy();
