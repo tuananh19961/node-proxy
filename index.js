@@ -51,7 +51,7 @@ const wss = new WebSocket.Server({
   }
 });
 const nodes = {};
-const MAX_CONNECTION_PER_IP = 4;
+const MAX_CONNECTION_PER_IP = 10;
 
 const addToBlackList = async (ip) => {
   try {
