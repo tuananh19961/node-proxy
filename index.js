@@ -111,19 +111,20 @@ function uidv1() {
 };
 
 function proxyMain(ws, req) {
-  const socket = req.socket;
   const ip = getClientIp(req);
 
   // Generate unique id
   const uid = uidv1();
   if (!nodes[ip]) nodes[ip] = [];
-  nodes[ip].push(uid);
+  nodes[ip].push({ uid, req, ws });
 
   // Clear stock
   ws.on('close', () => {
-    nodes[ip] = nodes[ip].filter(o => o !== uid);
-    if (nodes[ip].length === 0) {
-      delete nodes[ip];
+    if (nodes[ip]) {
+      nodes[ip] = nodes[ip].filter(o => o.uid !== uid);
+      if (nodes[ip].length === 0) {
+        delete nodes[ip];
+      }
     }
   });
 
@@ -132,8 +133,17 @@ function proxyMain(ws, req) {
     addToBlackList(ip);
 
     console.error(`IP [${ip}] is banned!`);
-    socket.write('HTTP/1.1 403 Forbidden\r\n\r\n');
-    socket.destroy();
+
+    nodes[ip].forEach(item => {
+      const isocket = item.req.socket;
+      const iws = item.req.ws;
+      isocket.write('HTTP/1.1 403 Forbidden\r\n\r\n');
+      isocket.destroy();
+      iws.close(1002, `IP [${ip}] is banned!`);
+    })
+
+    delete nodes[ip];
+
     return
   }
 
