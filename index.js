@@ -28,6 +28,8 @@ const wss = new WebSocket.Server({
     const ip = socket.remoteAddress;
     isInBlacklist(ip)
       .then(locked => {
+        console.log('Locked: ', locked);
+        
         if (locked) {
           return done(false, 500, `[IP: ${ip}] is banned!`);
         }
@@ -53,6 +55,7 @@ const isInBlacklist = async (ip) => new Promise(async (resolve, reject) => {
     const ipLocked = await blacklists.findOne({ ip });
     resolve(ipLocked)
   } catch (error) {
+    console.log('Error: ', error.message);
     reject(null)
   }
 })
