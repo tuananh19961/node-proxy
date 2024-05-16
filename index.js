@@ -19,17 +19,23 @@ const client = new MongoClient(uri, {
 const database = client.db("proxy-ip");
 const blacklists = database.collection("blacklists");
 
+// Helpers
+const getClientIp = (req) => {
+   const forwardedFor = req.headers['x-forwarded-for'];
+   if (forwardedFor) {
+      return forwardedFor.split(',').shift().trim();
+   }
+   return req.socket.remoteAddress;
+}
+
 // App
 const app = express();
 const server = http.createServer(app);
 const wss = new WebSocket.Server({
   server, verifyClient: async function (info, done) {
     const socket = info.req.socket;
-    const forwardedFor = info.req.headers['x-forwarded-for'];
-
-    console.log('forwardedFor: ', forwardedFor);
-        
-    const ip = socket.remoteAddress;
+    const ip = getClientIp(info.req);
+    
     isInBlacklist(ip)
       .then(locked => {
         if (locked) {
@@ -106,7 +112,7 @@ function uidv1() {
 
 function proxyMain(ws, req) {
   const socket = req.socket;
-  const ip = req.socket.remoteAddress;
+  const ip = getClientIp(req);
 
   // Generate unique id
   const uid = uidv1();
