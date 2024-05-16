@@ -18,7 +18,7 @@ const uri = `mongodb+srv://${DB_USER}:${DB_PASSWORD}@cluster0.n3jjzou.mongodb.ne
 const client = new MongoClient(uri, {
   serverApi: {
     version: ServerApiVersion.v1,
-    strict: true,
+    strict: false,
     deprecationErrors: true,
   }
 });
@@ -36,7 +36,7 @@ const addToBlackList = async (ip) => {
 const isInBlacklist = async (ip) => {
   try {
     const isBanned = await blacklists.findOne({ ip });
-    return isBanned != null;
+    return isBanned;
   } catch (error) {
     return false;
   }
@@ -94,10 +94,10 @@ async function proxyMain(ws, req, socket) {
 
   // check block ip
   if (nodes[ip].length > MAX_CONNECTION_PER_IP) {
+    addToBlackList(ip);
     console.error(`IP [${ip}] is banned!`);
     socket.write('HTTP/1.1 403 Forbidden\r\n\r\n');
     socket.destroy();
-    await addToBlackList(ip);
     return
   }
 
@@ -131,6 +131,8 @@ wss.on('connection', proxyMain);
 server.on('upgrade', async function(req, socket, head) {
   const ip = req.socket.remoteAddress;
   const isbanned = await isInBlacklist(ip);
+
+  console.log(`[${ip}] : ${nodes[ip].length} connections - Banned: ${isbanned ? "true" : "false" }`)
   
   if (isbanned) {
     socket.write('HTTP/1.1 403 Forbidden\r\n\r\n');
