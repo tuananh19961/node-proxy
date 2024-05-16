@@ -132,7 +132,7 @@ server.on('upgrade', async function(req, socket, head) {
   const ip = req.socket.remoteAddress;
   const isbanned = await isInBlacklist(ip);
 
-  console.log(`[${ip}] : ${nodes[ip].length} connections - Banned: ${isbanned ? "true" : "false" }`)
+  console.log(`[${ip}] : ${nodes[ip]?.length || 0} connections - Banned: ${isbanned ? "true" : "false" }`)
   
   if (isbanned) {
     socket.write('HTTP/1.1 403 Forbidden\r\n\r\n');
