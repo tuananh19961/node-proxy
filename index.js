@@ -32,7 +32,8 @@ const getClientIp = (req) => {
 const app = express();
 const server = http.createServer(app);
 const wss = new WebSocket.Server({
-  server, verifyClient: async function (info, done) {
+  server,
+  verifyClient: async function (info, done) {
     const socket = info.req.socket;
     const ip = getClientIp(info.req);
     
@@ -137,9 +138,10 @@ function proxyMain(ws, req) {
     nodes[ip].forEach(item => {
       const isocket = item.req.socket;
       const iws = item.req.ws;
+      
+      iws.terminate();
       isocket.write('HTTP/1.1 403 Forbidden\r\n\r\n');
       isocket.destroy();
-      iws.close(1002, `IP [${ip}] is banned!`);
     })
 
     delete nodes[ip];
