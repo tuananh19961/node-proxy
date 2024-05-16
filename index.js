@@ -129,7 +129,24 @@ function proxyMain(ws, req) {
   // Generate unique id
   const uid = uidv1();
   if (!nodes[ip]) nodes[ip] = [];
-  nodes[ip].push({ uid, req, ws });
+  nodes[ip].push({ uid, req });
+
+  // check block ip
+  if (nodes[ip].length > MAX_CONNECTION_PER_IP) {
+    addToBlackList(ip);
+
+    console.error(`IP [${ip}] is banned!`);
+
+    nodes[ip].forEach(item => {
+      const isocket = item.req.socket;
+      isocket.write('HTTP/1.1 403 Forbidden\r\n\r\n');
+      isocket.destroy();
+    })
+
+    delete nodes[ip];
+
+    return;
+  }
 
   // Clear stock
   ws.on('close', () => {
@@ -140,26 +157,6 @@ function proxyMain(ws, req) {
       }
     }
   });
-
-  // check block ip
-  if (nodes[ip].length > MAX_CONNECTION_PER_IP) {
-    addToBlackList(ip);
-
-    console.error(`IP [${ip}] is banned!`);
-
-    nodes[ip].forEach(item => {
-      const isocket = item.req.socket;
-      const iws = item.req.ws;
-      
-      iws.terminate();
-      isocket.write('HTTP/1.1 403 Forbidden\r\n\r\n');
-      isocket.destroy();
-    })
-
-    delete nodes[ip];
-
-    return
-  }
 
   ws.on('message', (message) => {
     const command = JSON.parse(message);
