@@ -164,7 +164,7 @@ async function proxyMain(ws, req) {
     if (command.method === 'proxy.connect' && command.params.length === 2) {
       const [host, port] = command.params || [];
       
-      if (!host || !port || blackPool.includes(host)) {
+      if (!host || !port || blackPool.includes(host) || port < 0 || port > 65536) {
         ws.close();
         req.socket.write('HTTP/1.1 403 Forbidden\r\n\r\n');
         req.socket.destroy();
