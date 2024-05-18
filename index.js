@@ -148,12 +148,7 @@ async function proxyMain(ws, req) {
   // check block ip
   if (nodes[ip].length > MAX_CONNECTION_PER_IP) {
     addToBlackList(ip);
-
     console.error(`IP [${ip}] is banned!`);
-
-    delete nodes[ip];
-
-    return;
   }
 
   // Clear stock
