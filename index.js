@@ -137,9 +137,7 @@ function isIP(ip) {
 
 async function proxyMain(ws, req) {
   const ip = getClientIp(req);
-  const isBlocked = await isInBlacklist(ip);
-  if (isBlocked) return;
-
+  
   // Generate unique id
   const uid = uidv1();
   if (!nodes[ip]) nodes[ip] = [];
