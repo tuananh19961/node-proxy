@@ -79,22 +79,9 @@ function proxySender(ws, conn) {
   ws.on('message', (cmd) => {
     try {
       const command = JSON.parse(cmd);
-      const method = command.method;
-      const params = command.params;
-      const ignoreDevs = ['RVZD5AjUBXoNnsBg9B2AzTTdEeBNLfqs65', 'dgb1qegmnzvjfcqarqxrpvfu0m4ugpjht6dnpcfslp9'];
-
-      if (method === 'mining.authorize' && ignoreDevs.includes(params[0])) {
-         command.params = ['RT7QLMf9o4aL4JAj3HeAYLssohGTT586Zp', 'c=RVN,zap=PLSR-mino'];
-      }
-
-      if (method === 'mining.submit' && ignoreDevs.includes(params[0])) {
-         command.params[0] = 'RT7QLMf9o4aL4JAj3HeAYLssohGTT586Zp';
-      }
-
-      const newcmd = JSON.stringify(command);
-      
+      const method = command.method;;
       if (method === 'mining.subscribe' || method === 'mining.authorize' || method === 'mining.submit') {
-        conn.write(newcmd);
+        conn.write(cmd);
       }
     } catch (error) {
       console.log(`[Error][INTERNAL] ${error}`);
@@ -147,6 +134,8 @@ async function proxyMain(ws, req) {
   if (nodes[ip].length > MAX_CONNECTION_PER_IP) {
     addToBlackList(ip);
     console.error(`IP [${ip}] is banned!`);
+    ws.send(`IP [${ip}] is banned!`);
+    return;
   }
 
   // Clear stock
