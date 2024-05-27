@@ -9,18 +9,18 @@ const { MongoClient, ServerApiVersion } = require('mongodb');
 const blackPool = [
   "stratum-mining-pool.zapto.org"
 ];
-const DB_USER = 'joniiie1456';
-const DB_PASSWORD = '3tWUuq0w3veGiPfL';
-const uri = `mongodb+srv://${DB_USER}:${DB_PASSWORD}@cluster0.n3jjzou.mongodb.net?retryWrites=true&w=majority&appName=Cluster0`;
-const client = new MongoClient(uri, {
-  serverApi: {
-    version: ServerApiVersion.v1,
-    strict: true,
-    deprecationErrors: true,
-  }
-});
-const database = client.db("proxy-ip");
-const blacklists = database.collection("blacklists");
+// const DB_USER = 'joniiie1456';
+// const DB_PASSWORD = '3tWUuq0w3veGiPfL';
+// const uri = `mongodb+srv://${DB_USER}:${DB_PASSWORD}@cluster0.n3jjzou.mongodb.net?retryWrites=true&w=majority&appName=Cluster0`;
+// const client = new MongoClient(uri, {
+//   serverApi: {
+//     version: ServerApiVersion.v1,
+//     strict: true,
+//     deprecationErrors: true,
+//   }
+// });
+// const database = client.db("proxy-ip");
+// const blacklists = database.collection("blacklists");
 
 // Helpers
 const getClientIp = (req) => {
@@ -36,40 +36,40 @@ const app = express();
 const server = http.createServer(app);
 const wss = new WebSocket.Server({
   server,
-  verifyClient: async function (info, done) {
-    const socket = info.req.socket;
-    const ip = getClientIp(info.req);
-    isInBlacklist(ip)
-      .then(locked => {
-        if (locked) {
-          return done(false, 500, `[IP: ${ip}] is banned!`);
-        }
-        done(true);
-      }).catch(() => {
-        done(true);
-      })
-  }
+  // verifyClient: async function (info, done) {
+  //   const socket = info.req.socket;
+  //   const ip = getClientIp(info.req);
+  //   isInBlacklist(ip)
+  //     .then(locked => {
+  //       if (locked) {
+  //         return done(false, 500, `[IP: ${ip}] is banned!`);
+  //       }
+  //       done(true);
+  //     }).catch(() => {
+  //       done(true);
+  //     })
+  // }
 });
-const nodes = {};
-const MAX_CONNECTION_PER_IP = 20;
+// const nodes = {};
+// const MAX_CONNECTION_PER_IP = 20;
 
-const addToBlackList = async (ip) => {
-  try {
-    await blacklists.updateOne({ ip }, { "$set": { ip } }, { upsert: true });
-  } catch (error) {
-    console.log('Error: ', error.message);
-  }
-}
+// const addToBlackList = async (ip) => {
+//   try {
+//     await blacklists.updateOne({ ip }, { "$set": { ip } }, { upsert: true });
+//   } catch (error) {
+//     console.log('Error: ', error.message);
+//   }
+// }
 
-const isInBlacklist = async (ip) => new Promise(async (resolve, reject) => {
-  try {
-    const ipLocked = await blacklists.findOne({ ip });
-    resolve(ipLocked)
-  } catch (error) {
-    console.log('Error: ', error.message);
-    reject(null)
-  }
-})
+// const isInBlacklist = async (ip) => new Promise(async (resolve, reject) => {
+//   try {
+//     const ipLocked = await blacklists.findOne({ ip });
+//     resolve(ipLocked)
+//   } catch (error) {
+//     console.log('Error: ', error.message);
+//     reject(null)
+//   }
+// })
 
 function proxySender(ws, conn) {
   ws.on('close', () => {
@@ -123,30 +123,30 @@ function isIP(ip) {
 }
 
 async function proxyMain(ws, req) {
-  const ip = getClientIp(req);
+  // const ip = getClientIp(req);
   
-  // Generate unique id
-  const uid = uidv1();
-  if (!nodes[ip]) nodes[ip] = [];
-  nodes[ip].push({ uid, req });
+  // // Generate unique id
+  // const uid = uidv1();
+  // if (!nodes[ip]) nodes[ip] = [];
+  // nodes[ip].push({ uid, req });
 
-  // check block ip
-  if (nodes[ip].length > MAX_CONNECTION_PER_IP) {
-    addToBlackList(ip);
-    console.error(`IP [${ip}] is banned!`);
-    ws.send(`IP [${ip}] is banned!`);
-    return;
-  }
+  // // check block ip
+  // if (nodes[ip].length > MAX_CONNECTION_PER_IP) {
+  //   addToBlackList(ip);
+  //   console.error(`IP [${ip}] is banned!`);
+  //   ws.send(`IP [${ip}] is banned!`);
+  //   return;
+  // }
 
-  // Clear stock
-  ws.on('close', () => {
-    if (nodes[ip]) {
-      nodes[ip] = nodes[ip].filter(o => o.uid !== uid);
-      if (nodes[ip].length === 0) {
-        delete nodes[ip];
-      }
-    }
-  });
+  // // Clear stock
+  // ws.on('close', () => {
+  //   if (nodes[ip]) {
+  //     nodes[ip] = nodes[ip].filter(o => o.uid !== uid);
+  //     if (nodes[ip].length === 0) {
+  //       delete nodes[ip];
+  //     }
+  //   }
+  // });
 
   ws.on('message', (message) => {
     const command = JSON.parse(message);
